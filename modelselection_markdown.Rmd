@@ -9,57 +9,80 @@ output:
     toc_depth: 2
 ---
 
-#FIND A MULTIPLE REGRESSION DATASET 
-
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
 # Call relevant packages to your work space:
-
+library(ggplot2)
+library(patchwork)
+library(MuMIn)
 
 ```
 
 ```{r Data, include=FALSE}
 
 # Read in data you will use for the assignment: 
+pasta <- read.csv("pasta.data.csv")
 
 ```
+#Data
+The ***Never-Ending Pasta Bowl*** is back at Olive Garden. Last week, several of us decided to go take advantage of this deal. While we were there, I collected some data. 
+This data set includes names, labs, number of pasta bowls eaten, number of breadsticks eaten, type of appetizer ordered, number of drinks drank, level of hunger upon entering Olive Garden, and whether or not leftovers were taken home for each individual who participated. Hopefully I can run some models with this data. If not, I have some backup data to use that I found online. But, pasta data seems more fun than health insurance cost data, so fingers crossed. 
 
-Multicolinearity means that once you know the effect of one predictor, the value of knowing the other is low. If a variable has a high level of varaince inflation (greater than 6), you can get rid of it, as it is not adding to models. 
-
+#Check the Data
+Multicolinearity means that once you know the effect of one predictor, the value of knowing the other is low. If a variable has a high level of variance inflation (greater than 6), you can get rid of it, as it is not adding to models. Let's go ahead and check our data out:  
 ```{r Colinearity check, include=TRUE}
 
 # Check for colinearity. Remember, we do not want multiple colinearity for model selection. 
+pairs(pasta[,c(3,4,6)], lower.panel = NULL)
+
+# Performance check: 
+model_pasta <- lm(no.pasta ~ no.bread + app + no.drink + hunger + leftovers, data=pasta)
+anova (model_pasta) # Coefficients of the full model
+performance::check_collinearity(model_pasta) # Low correlation detected - good to go! 
 
 ```
+I have  a pretty small data frame, but it seems fine. Maybe even semi-parsimonious.
 
-```{r Diagnostic plot, include=TRUE}
-
-# Use a diagnostic plot to check data:
-
-```
-
+#Building Models
+Let's go ahead and build some candidate models for model selection. I'll use number of pasta bowls eaten as my response variable, as predicted by various other variables (number of breadsticks eaten, hunger, appetizer, lab, leftovers, etc.) 
 ```{r Building models, include=TRUE}
 
 # Build multiple candidate models to compare. All of these models are built to explain some variation in the response variable using different predictor variables. Remember, all of these models need to have the same error structure.
+  mod1<-lm(no.pasta~no.bread, data = pasta)
+  mod2<-lm(no.pasta~no.bread+hunger, data = pasta)
+  mod3<-lm(no.pasta~lab+app, data = pasta)
+  mod4<-lm(no.pasta~lab+hunger+leftovers, data = pasta)
+  mod5<-lm(no.pasta~hunger+app, data=pasta)
 
 ```
 
+#Comparing Models
+Now that we have four "candidate models" built, we can use the model.sel function to conduct some model selection. The output for this function will rank them by AICc, since I have a small sample size. We can look at AICc, delta, and weight values to interpret the results. 
 ```{r Model comparison, include=TRUE}
 
-# Compare the models: 
+# Compare the models, using model.sel function. Output will contain all model selection information in one object.
+out.put<-model.sel(mod1,mod2,mod3,mod4,mod5)
+out.put
+
+```
+##Interpreting Model Selection
+Here, model 1, which simply used the number of breadsticks eaten to predict the number of bowls of pasta eaten, is ranked as the top model. It has an AICc value of 43.3, which is the lowest of the four and is more than two units from the next-best model, which tells us that the first and second models are not comparable. Its weight value is a whopping 0.871, which means that *if the best model for this data is here, there is a 87.1% chance that model 1 is it.* The next two models in the ranking, models 5 and 2, are comparable, as their AICc values are within 2 units of each other. They share similar delta and weight values as well. Models 3 and 4 seem to suck.
+
+#Global Model 
+Building a global model allows us to find all possible variable combinations and models by fitting a model with ***all*** parameters. We can use the dredge function to do this: 
+```{r Global model, include=TRUE}
+
+# Build a global model with the dredge function. That is, find all of the possible variable combinations and models; fit the model with ALL parameters available. 
 
 ```
 
+#Variable Importance 
+Let's see which variables are the most important for this data set. We can find importance weights for individual predictor variables with the sw function. 
 ```{r Variable weights, include=TRUE}
 
 # Which variables are most important in these models? Use the sw function to find out the different importance weights for individual predictor variables: 
 
-```
-
-```{r Global model, include=TRUE}
-
-# Build a global model with the dredge function. That is, find all of the possible variable combinations and models; fit the model with ALL parameters available. 
 
 ```
 
@@ -80,5 +103,18 @@ Multicolinearity means that once you know the effect of one predictor, the value
 ```{r Plots with relevant variables, include=TRUE}
 
 # Make plots showing relevant variables, as determined from global model selection: 
+
+```
+
+
+
+
+
+Let's run a diagnostic plot to look at the model, too: 
+
+```{r Diagnostic plot, include=TRUE}
+
+# Use a diagnostic plot to check model:
+
 
 ```
