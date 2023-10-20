@@ -1,0 +1,84 @@
+---
+title: "Never-Ending Pasta"
+author: "Leah N. Crowley"
+date: "2023-10-19"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 2
+---
+
+#FIND A MULTIPLE REGRESSION DATASET 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Call relevant packages to your work space:
+
+
+```
+
+```{r Data, include=FALSE}
+
+# Read in data you will use for the assignment: 
+
+```
+
+Multicolinearity means that once you know the effect of one predictor, the value of knowing the other is low. If a variable has a high level of varaince inflation (greater than 6), you can get rid of it, as it is not adding to models. 
+
+```{r Colinearity check, include=TRUE}
+
+# Check for colinearity. Remember, we do not want multiple colinearity for model selection. 
+
+```
+
+```{r Diagnostic plot, include=TRUE}
+
+# Use a diagnostic plot to check data:
+
+```
+
+```{r Building models, include=TRUE}
+
+# Build multiple candidate models to compare. All of these models are built to explain some variation in the response variable using different predictor variables. Remember, all of these models need to have the same error structure.
+
+```
+
+```{r Model comparison, include=TRUE}
+
+# Compare the models: 
+
+```
+
+```{r Variable weights, include=TRUE}
+
+# Which variables are most important in these models? Use the sw function to find out the different importance weights for individual predictor variables: 
+
+```
+
+```{r Global model, include=TRUE}
+
+# Build a global model with the dredge function. That is, find all of the possible variable combinations and models; fit the model with ALL parameters available. 
+
+```
+
+```{r Subset with top models, include=TRUE}
+
+# Subset the global model to only include models with delta values of 5 or less. That is, pull all of the models that are within 5 units of change of the top model, which has a delta value of 0. 
+
+
+```
+
+```{r Subset with top model, include=TRUE}
+
+# Subset the global model to only include the top model, which has a delta value of 0: 
+
+
+```
+
+```{r Plots with relevant variables, include=TRUE}
+
+# Make plots showing relevant variables, as determined from global model selection: 
+
+```
