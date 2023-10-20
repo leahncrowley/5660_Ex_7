@@ -16,36 +16,49 @@ knitr::opts_chunk$set(echo = TRUE)
 library(ggplot2)
 library(patchwork)
 library(MuMIn)
+library(dplyr)
+library(leaflet)
 
 ```
 
 ```{r Data, include=FALSE}
 
 # Read in data you will use for the assignment: 
-pasta <- read.csv("pasta.data.csv")
+  pasta <- read.csv("pasta.data.csv")
 
 ```
-#Data
-The ***Never-Ending Pasta Bowl*** is back at Olive Garden. Last week, several of us decided to go take advantage of this deal. While we were there, I collected some data. 
-This data set includes names, labs, number of pasta bowls eaten, number of breadsticks eaten, type of appetizer ordered, number of drinks drank, level of hunger upon entering Olive Garden, and whether or not leftovers were taken home for each individual who participated. Hopefully I can run some models with this data. If not, I have some backup data to use that I found online. But, pasta data seems more fun than health insurance cost data, so fingers crossed. 
+![](pasta.PNG)
+Olive Garden's ***Never-Ending Pasta Bowl*** is back, baby! Clarksville only has one location, and here it is: 
+```{r OG map, echo=FALSE}
 
-#Check the Data
-Multicolinearity means that once you know the effect of one predictor, the value of knowing the other is low. If a variable has a high level of variance inflation (greater than 6), you can get rid of it, as it is not adding to models. Let's go ahead and check our data out:  
-```{r Colinearity check, include=TRUE}
+leaflet() %>%
+  setView(-87.295635, 36.585357, zoom = 150) %>% 
+  addTiles() %>%
+  addMarkers(-87.295635, 36.585357, popup = "Clarksville's Best Italian Restaurant")
+
+```
+
+# Data
+
+The ***Never-Ending Pasta Bowl*** is back at Olive Garden. Last week, several of us decided to go take advantage of this deal. While we were there, I collected some data. This data set includes names, labs, number of pasta bowls eaten, number of breadsticks eaten, type of appetizer ordered, number of drinks drank, level of hunger upon entering Olive Garden, and whether or not leftovers were taken home for each individual who participated. Hopefully I can run some models with this data. If not, I have some backup data to use that I found online. But, pasta data seems more fun than health insurance cost data, so fingers crossed.
+
+# Check the Data
+
+Multicolinearity means that once you know the effect of one predictor, the value of knowing the other is low. If a variable has a high level of variance inflation (greater than 6), you can get rid of it, as it is not adding to models. Let's go ahead and check our data out:
+
+```{r Colinearity check, echo=FALSE}
 
 # Check for colinearity. Remember, we do not want multiple colinearity for model selection. 
-pairs(pasta[,c(3,4,6)], lower.panel = NULL)
-
-# Performance check: 
-model_pasta <- lm(no.pasta ~ no.bread + app + no.drink + hunger + leftovers, data=pasta)
-anova (model_pasta) # Coefficients of the full model
-performance::check_collinearity(model_pasta) # Low correlation detected - good to go! 
+  pairs(pasta[,c(3,4,6)], lower.panel = NULL)
 
 ```
-I have  a pretty small data frame, but it seems fine. Maybe even semi-parsimonious.
 
-#Building Models
-Let's go ahead and build some candidate models for model selection. I'll use number of pasta bowls eaten as my response variable, as predicted by various other variables (number of breadsticks eaten, hunger, appetizer, lab, leftovers, etc.) 
+I have a pretty small data frame, but it seems fine. Maybe even semi-parsimonious.
+
+# Building Models
+
+Let's go ahead and build some candidate models for model selection. I'll use number of pasta bowls eaten as my response variable, as predicted by various other variables (number of breadsticks eaten, hunger, appetizer, lab, leftovers, etc.)
+
 ```{r Building models, include=TRUE}
 
 # Build multiple candidate models to compare. All of these models are built to explain some variation in the response variable using different predictor variables. Remember, all of these models need to have the same error structure.
@@ -57,64 +70,124 @@ Let's go ahead and build some candidate models for model selection. I'll use num
 
 ```
 
-#Comparing Models
-Now that we have four "candidate models" built, we can use the model.sel function to conduct some model selection. The output for this function will rank them by AICc, since I have a small sample size. We can look at AICc, delta, and weight values to interpret the results. 
+# Comparing Models
+
+Now that we have five "candidate models" built, we can use the model.sel function to conduct some model selection. The output for this function will rank them by AICc, since I have a small sample size. We can look at AICc, delta, and weight values to interpret the results.
+
 ```{r Model comparison, include=TRUE}
 
 # Compare the models, using model.sel function. Output will contain all model selection information in one object.
-out.put<-model.sel(mod1,mod2,mod3,mod4,mod5)
-out.put
+  out.put<-model.sel(mod1,mod2,mod3,mod4,mod5)
+  out.put
 
 ```
-##Interpreting Model Selection
+
+## Interpreting Model Selection
+
 Here, model 1, which simply used the number of breadsticks eaten to predict the number of bowls of pasta eaten, is ranked as the top model. It has an AICc value of 43.3, which is the lowest of the four and is more than two units from the next-best model, which tells us that the first and second models are not comparable. Its weight value is a whopping 0.871, which means that *if the best model for this data is here, there is a 87.1% chance that model 1 is it.* The next two models in the ranking, models 5 and 2, are comparable, as their AICc values are within 2 units of each other. They share similar delta and weight values as well. Models 3 and 4 seem to suck.
 
-#Global Model 
-Building a global model allows us to find all possible variable combinations and models by fitting a model with ***all*** parameters. We can use the dredge function to do this: 
-```{r Global model, include=TRUE}
+***But,*** **our best model might not even be included in the five candidate models. Let's see.**
+
+# Global Model
+
+Building a global model allows us to find all possible variable combinations and models by fitting a model with ***all*** parameters. We can use the dredge function to do this. The output is typically hefty, so beware.
+
+```{r Global model, echo=FALSE, message=FALSE, warning=FALSE}
 
 # Build a global model with the dredge function. That is, find all of the possible variable combinations and models; fit the model with ALL parameters available. 
+  all.params <- lm(no.pasta ~ no.bread + app + no.drink + hunger + leftovers, data=pasta)
+    options(na.action = "na.fail") 
+  results<-dredge(all.params)
+  results
+  
+```
+
+## Performance check for global model
+
+```{r Performance check, include=TRUE}
+# Performance check: 
+  performance::check_collinearity(all.params) # Low correlation detected - good to go! 
 
 ```
 
-#Variable Importance 
-Let's see which variables are the most important for this data set. We can find importance weights for individual predictor variables with the sw function. 
-```{r Variable weights, include=TRUE}
+## Subsetting global model
 
-# Which variables are most important in these models? Use the sw function to find out the different importance weights for individual predictor variables: 
+Like I said, the output is kind of hefty. Let's first subset these results to only include models within five units of the top model (delta \< 5) to filter out most of the less-relevant models.
 
-
-```
-
-```{r Subset with top models, include=TRUE}
+```{r Subset with top models, echo=FALSE}
 
 # Subset the global model to only include models with delta values of 5 or less. That is, pull all of the models that are within 5 units of change of the top model, which has a delta value of 0. 
-
+  subset(results, delta <5)
 
 ```
 
-```{r Subset with top model, include=TRUE}
+Now, let's look at the top model only. The top model has a delta value of 0.
+
+```{r Subset with top model, echo=FALSE}
 
 # Subset the global model to only include the top model, which has a delta value of 0: 
-
-
-```
-
-```{r Plots with relevant variables, include=TRUE}
-
-# Make plots showing relevant variables, as determined from global model selection: 
+#grab equally competitive models
+subset(results, delta ==0)
 
 ```
 
+Model 5 has been selected as the best-fitted model for our data. Apparently, whether or not someone took leftovers home was a highly relevant variable in this set. Model 5 has an AICc value of 35.4, and it is comparable to the next best model, which was model 21. Model 21 included variables of the number of drinks someone had, as well as whether or not they took home leftovers. Model 21's AICc value was 36.
 
+Delta values for the top two models were 0.546 and 0.408, respectively. Clearly, these models have similar explanatory power when it comes to predicting the number of bowls of pasta someone ate.
 
+# Relevant Variables
 
+Let's see which variables are the most important for this data set. We can find importance weights for individual predictor variables with the sw function.
 
-Let's run a diagnostic plot to look at the model, too: 
+```{r Variable weights, echo=FALSE}
 
-```{r Diagnostic plot, include=TRUE}
+# Which variables are most important in these models? Use the sw function to find out the different importance weights for individual predictor variables: 
+sw(results) 
 
-# Use a diagnostic plot to check model:
+```
 
+I can't believe the number of breadsticks eaten is ranked lower than the number of drinks someone had! This surprises me, personally.
+
+# Obligatory Plots
+
+I guess it's time to include a figure in this assignment. There is no escaping ggplot!
+
+```{r Plots with relevant variables, message=FALSE, warning=FALSE, include=FALSE}
+
+p1 <- ggplot(pasta, aes(no.pasta, no.bread)) + 
+  geom_point(color="darkolivegreen", size=4) +
+  geom_smooth(method="lm", color="black") +
+  xlab("Number of Pasta Bowls Eaten") +
+  ylab("Number of Breadsticks Eaten")
+  ggtitle("Pasta and Breadsticks")
+  theme_bw() 
+
+p2 <- ggplot(pasta, aes(no.pasta, no.drink)) + 
+  geom_point(color="brown", size=4) +
+  geom_smooth(method="lm", color="black") +
+  xlab("Number of Pasta Bowls Eaten") +
+  ylab("Number of Drinks Drank")
+  ggtitle("Pasta and Drinks")
+  theme_bw()
+
+p1 / p2 
+
+```
+
+```{r Plot Output, include=TRUE}
+p1 / p2 
+```
+
+# Invitation
+
+Since breadstick eating didn't seem to be ranked as the best predictor variable for number of pasta bowls eaten... maybe we should try with chips and salsa. Who's with me?
+
+![](elcomal.jpg)
+```{r EC map, echo=FALSE}
+
+leaflet() %>%
+  setView(-87.304226, 36.568758, zoom = 150) %>% 
+  addTiles() %>%
+  addMarkers(-87.304226, 36.568758, popup = "One of Clarksville's Best Mexican Restaurants")
 
 ```
